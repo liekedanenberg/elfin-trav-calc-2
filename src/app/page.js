@@ -1,156 +1,167 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import styles from './page.module.css';
 
 export default function Home() {
   const [formData, setFormData] = useState({
     destination: '',
-    adults: 1,
+    adults: 2,
     children: 0,
     childrenAges: [],
     days: 7,
     transport: 'plane',
     luxury: 'standard',
     email: '',
-    terms: false
+    firstName: '',
+    lastName: ''
   });
   
-  const [loading, setLoading] = useState(false);
+  const [currentMonth, setCurrentMonth] = useState(new Date().getMonth() + 1);
+  const [showChildrenAges, setShowChildrenAges] = useState(false);
   const [result, setResult] = useState(null);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [currentMonth] = useState(new Date().getMonth());
+  
+  useEffect(() => {
+    // Update children ages array when children count changes
+    if (formData.children > formData.childrenAges.length) {
+      // Add new child ages with default value of 10
+      const newAges = [...formData.childrenAges];
+      for (let i = formData.childrenAges.length; i < formData.children; i++) {
+        newAges.push(10);
+      }
+      setFormData({
+        ...formData,
+        childrenAges: newAges
+      });
+    } else if (formData.children < formData.childrenAges.length) {
+      // Remove excess child ages
+      setFormData({
+        ...formData,
+        childrenAges: formData.childrenAges.slice(0, formData.children)
+      });
+    }
+    
+    setShowChildrenAges(formData.children > 0);
+  }, [formData.children]);
   
   const handleInputChange = (e) => {
-    const { name, value, type, checked } = e.target;
+    const { name, value, type } = e.target;
     
-    if (type === 'checkbox') {
-      setFormData({ ...formData, [name]: checked });
-    } else if (name === 'children') {
-      const numChildren = parseInt(value);
-      const newChildrenAges = Array(numChildren).fill(0);
-      
-      // Behoud bestaande leeftijden waar mogelijk
-      formData.childrenAges.forEach((age, index) => {
-        if (index < numChildren) {
-          newChildrenAges[index] = age;
-        }
+    if (type === 'number') {
+      setFormData({
+        ...formData,
+        [name]: parseInt(value, 10) || 0
       });
-      
-      setFormData({ 
-        ...formData, 
-        [name]: numChildren,
-        childrenAges: newChildrenAges
-      });
-    } else if (name.startsWith('childAge')) {
-      const index = parseInt(name.replace('childAge', ''));
-      const newChildrenAges = [...formData.childrenAges];
-      newChildrenAges[index] = parseInt(value);
-      setFormData({ ...formData, childrenAges: newChildrenAges });
     } else {
-      setFormData({ ...formData, [name]: value });
+      setFormData({
+        ...formData,
+        [name]: value
+      });
     }
   };
   
+  const handleChildAgeChange = (index, value) => {
+    const newAges = [...formData.childrenAges];
+    newAges[index] = parseInt(value, 10) || 0;
+    
+    setFormData({
+      ...formData,
+      childrenAges: newAges
+    });
+  };
+  
   const handleSubmit = async (e) => {
-  e.preventDefault();
-  setLoading(true);
-  setError(null);
-  
-  try {
-    // Bereid data voor om naar API te sturen
-    const requestData = {
-      destination: formData.destination,
-      adults: formData.adults,
-      children: formData.children,
-      days: formData.days,
-      transport: formData.transport,
-      luxury: formData.luxury,
-      month: currentMonth,
-      email: formData.email
-    };
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
     
-    // Voeg leeftijden van kinderen toe
-    formData.childrenAges.forEach((age, index) => {
-      requestData[`childAge${index}`] = age;
-    });
-    
-    // Stuur data naar API
-    const response = await fetch('/api/calculate', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(requestData),
-    });
-    
-    if (!response.ok) {
-      throw new Error('Er is een fout opgetreden bij het berekenen van het budget');
-    }
-    
-    const data = await response.json();
-    setResult(data.budget);
-    
-    // Stuur data naar Active Campaign en verstuur e-mail
-    const subscribeResponse = await fetch('/api/subscribe', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        email: formData.email,
-        firstName: '', // Optioneel, kan worden toegevoegd aan het formulier
-        lastName: '', // Optioneel, kan worden toegevoegd aan het formulier
+    try {
+      // Bereid data voor om naar API te sturen
+      const requestData = {
         destination: formData.destination,
-        totalBudget: data.budget.totalCost,
-        breakdown: data.budget.breakdown,
-        seasonalInfo: data.budget.seasonalInfo,
-        luxuryLevel: data.budget.luxuryLevel
-      }),
-    });
-    
-    if (!subscribeResponse.ok) {
-      console.error('Fout bij verzenden naar Active Campaign of versturen van e-mail');
-    } else {
-      // Toon een melding dat de e-mail is verzonden
-      alert('Je reisbudget is berekend en naar je e-mailadres verzonden!');
+        adults: formData.adults,
+        children: formData.children,
+        days: formData.days,
+        transport: formData.transport,
+        luxury: formData.luxury,
+        month: currentMonth,
+        email: formData.email
+      };
+      
+      // Voeg leeftijden van kinderen toe
+      formData.childrenAges.forEach((age, index) => {
+        requestData[`childAge${index}`] = age;
+      });
+      
+      // Stuur data naar API
+      const response = await fetch('/api/calculate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestData),
+      });
+      
+      if (!response.ok) {
+        throw new Error('Er is een fout opgetreden bij het berekenen van het budget');
+      }
+      
+      const data = await response.json();
+      setResult(data.budget);
+      
+      // Stuur data naar Active Campaign en verstuur e-mail
+      const subscribeResponse = await fetch('/api/subscribe', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: formData.email,
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          destination: formData.destination,
+          totalBudget: data.budget.totalCost,
+          breakdown: data.budget.breakdown,
+          seasonalInfo: data.budget.seasonalInfo,
+          luxuryLevel: data.budget.luxuryLevel
+        }),
+      });
+      
+      if (!subscribeResponse.ok) {
+        console.error('Fout bij verzenden naar Active Campaign of versturen van e-mail');
+      } else {
+        // Toon een melding dat de e-mail is verzonden
+        alert('Je reisbudget is berekend en naar je e-mailadres verzonden!');
+      }
+      
+    } catch (err) {
+      console.error('Error:', err);
+      setError(err.message);
+    } finally {
+      setLoading(false);
     }
-    
-  } catch (err) {
-    console.error('Error:', err);
-    setError(err.message);
-  } finally {
-    setLoading(false);
-  }
-};
-
-  
-  const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('nl-NL', { 
-      style: 'currency', 
-      currency: 'EUR',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0
-    }).format(amount);
   };
   
   return (
     <main className={styles.main}>
       <header className={styles.header}>
-        <div className={styles.logo}>ELFIN</div>
+        <div className={styles.logo}>
+          <img src="/elfin-logo.png" alt="Elfin Logo" height="40" />
+        </div>
         <nav className={styles.nav}>
-          {/* Placeholder voor navigatie */}
+          {/* Navigatie-items indien nodig */}
         </nav>
       </header>
-
-      <div className={styles.intro}>
-        <h1>Bereken je Droomreis Budget</h1>
-        <p>Financieel voorbereid op je volgende avontuur</p>
-        <p>Vul het formulier in en ontdek hoeveel je moet sparen voor jouw perfecte reis.</p>
-      </div>
-
-      <div className={styles.formContainer}>
-        <form id="budget-calculator-form" onSubmit={handleSubmit}>
+      
+      <section className={styles.intro}>
+        <h1>Bereken het Budget voor je Droomreis</h1>
+        <p>Vul je reisgegevens in en ontdek hoeveel je moet sparen voor je volgende avontuur!</p>
+      </section>
+      
+      {!result ? (
+        <form className={styles.formContainer} onSubmit={handleSubmit}>
           <div className={styles.formSection}>
             <h3>Bestemming</h3>
             <div className={styles.formGroup}>
@@ -159,16 +170,39 @@ export default function Home() {
                 type="text" 
                 id="destination" 
                 name="destination" 
-                placeholder="Bijv. Parijs, Bali, New York..." 
                 value={formData.destination}
+                onChange={handleInputChange}
+                placeholder="Bijv. Parijs, Italië, Thailand" 
+                required 
+              />
+              <small>Voer een stad, land of regio in</small>
+            </div>
+          </div>
+          
+          <div className={styles.formSection}>
+            <h3>Reisgezelschap</h3>
+            <div className={styles.formGroup}>
+              <label htmlFor="firstName">Voornaam</label>
+              <input 
+                type="text" 
+                id="firstName" 
+                name="firstName" 
+                value={formData.firstName}
                 onChange={handleInputChange}
                 required 
               />
             </div>
-          </div>
-
-          <div className={styles.formSection}>
-            <h3>Reisgezelschap</h3>
+            <div className={styles.formGroup}>
+              <label htmlFor="lastName">Achternaam</label>
+              <input 
+                type="text" 
+                id="lastName" 
+                name="lastName" 
+                value={formData.lastName}
+                onChange={handleInputChange}
+                required 
+              />
+            </div>
             <div className={styles.formGroup}>
               <label htmlFor="adults">Aantal volwassenen</label>
               <input 
@@ -176,46 +210,47 @@ export default function Home() {
                 id="adults" 
                 name="adults" 
                 min="1" 
+                max="10"
                 value={formData.adults}
                 onChange={handleInputChange}
                 required 
               />
             </div>
             <div className={styles.formGroup}>
-              <label htmlFor="children">Aantal kinderen</label>
+              <label htmlFor="children">Aantal kinderen (0-17 jaar)</label>
               <input 
                 type="number" 
                 id="children" 
                 name="children" 
                 min="0" 
+                max="10"
                 value={formData.children}
                 onChange={handleInputChange}
               />
             </div>
-            {formData.children > 0 && (
+            
+            {showChildrenAges && (
               <div className={styles.formGroup}>
                 <label>Leeftijden van de kinderen</label>
                 <div className={styles.ageInputs}>
                   {formData.childrenAges.map((age, index) => (
-                    <div key={index} className={styles.formGroup}>
-                      <label htmlFor={`childAge${index}`}>Kind {index + 1}</label>
-                      <input 
-                        type="number" 
-                        id={`childAge${index}`} 
-                        name={`childAge${index}`} 
-                        min="0" 
-                        max="17" 
-                        value={age}
-                        onChange={handleInputChange}
-                        required 
-                      />
-                    </div>
+                    <input 
+                      key={index}
+                      type="number" 
+                      min="0" 
+                      max="17"
+                      value={age}
+                      onChange={(e) => handleChildAgeChange(index, e.target.value)}
+                      placeholder={`Kind ${index + 1}`}
+                      required 
+                    />
                   ))}
                 </div>
+                <small>De leeftijd van kinderen beïnvloedt het reisbudget</small>
               </div>
             )}
           </div>
-
+          
           <div className={styles.formSection}>
             <h3>Reisdetails</h3>
             <div className={styles.formGroup}>
@@ -225,188 +260,188 @@ export default function Home() {
                 id="days" 
                 name="days" 
                 min="1" 
+                max="90"
                 value={formData.days}
                 onChange={handleInputChange}
                 required 
               />
             </div>
+            
             <div className={styles.formGroup}>
               <label>Vervoersmiddel</label>
               <div className={styles.radioGroup}>
-                <div className={styles.radioOption}>
+                <label className={styles.radioLabel}>
                   <input 
                     type="radio" 
-                    id="transport-plane" 
                     name="transport" 
                     value="plane"
                     checked={formData.transport === 'plane'}
                     onChange={handleInputChange}
                   />
-                  <label htmlFor="transport-plane">Vliegtuig</label>
-                </div>
-                <div className={styles.radioOption}>
+                  <span>Vliegtuig</span>
+                </label>
+                <label className={styles.radioLabel}>
                   <input 
                     type="radio" 
-                    id="transport-train" 
                     name="transport" 
                     value="train"
                     checked={formData.transport === 'train'}
                     onChange={handleInputChange}
                   />
-                  <label htmlFor="transport-train">Trein</label>
-                </div>
-                <div className={styles.radioOption}>
+                  <span>Trein</span>
+                </label>
+                <label className={styles.radioLabel}>
                   <input 
                     type="radio" 
-                    id="transport-car" 
                     name="transport" 
                     value="car"
                     checked={formData.transport === 'car'}
                     onChange={handleInputChange}
                   />
-                  <label htmlFor="transport-car">Auto</label>
-                </div>
+                  <span>Auto</span>
+                </label>
               </div>
             </div>
+            
             <div className={styles.formGroup}>
               <label>Luxeniveau</label>
               <div className={styles.radioGroup}>
-                <div className={styles.radioOption}>
+                <label className={styles.radioLabel}>
                   <input 
                     type="radio" 
-                    id="luxury-budget" 
                     name="luxury" 
                     value="budget"
                     checked={formData.luxury === 'budget'}
                     onChange={handleInputChange}
                   />
-                  <label htmlFor="luxury-budget">Budget</label>
-                </div>
-                <div className={styles.radioOption}>
+                  <span>Budget</span>
+                </label>
+                <label className={styles.radioLabel}>
                   <input 
                     type="radio" 
-                    id="luxury-standard" 
                     name="luxury" 
                     value="standard"
                     checked={formData.luxury === 'standard'}
                     onChange={handleInputChange}
                   />
-                  <label htmlFor="luxury-standard">Standaard</label>
-                </div>
-                <div className={styles.radioOption}>
+                  <span>Standaard</span>
+                </label>
+                <label className={styles.radioLabel}>
                   <input 
                     type="radio" 
-                    id="luxury-luxury" 
                     name="luxury" 
                     value="luxury"
                     checked={formData.luxury === 'luxury'}
                     onChange={handleInputChange}
                   />
-                  <label htmlFor="luxury-luxury">Luxe</label>
-                </div>
+                  <span>Luxe</span>
+                </label>
               </div>
             </div>
           </div>
-
+          
           <div className={styles.formSection}>
-            <h3>Jouw gegevens</h3>
+            <h3>Ontvang je reisbudget per e-mail</h3>
             <div className={styles.formGroup}>
               <label htmlFor="email">E-mailadres</label>
               <input 
                 type="email" 
                 id="email" 
                 name="email" 
-                placeholder="jouw@email.nl"
                 value={formData.email}
                 onChange={handleInputChange}
                 required 
               />
               <small>We sturen je reisbudget naar dit e-mailadres</small>
             </div>
-            <div className={styles.formGroup}>
-              <div className={styles.radioOption}>
-                <input 
-                  type="checkbox" 
-                  id="terms" 
-                  name="terms"
-                  checked={formData.terms}
-                  onChange={handleInputChange}
-                  required 
-                />
-                <label htmlFor="terms">Ik ga akkoord met de voorwaarden en privacy policy</label>
-              </div>
-            </div>
           </div>
-
-          <div className={styles.btnContainer}>
-            <button 
-              type="submit" 
-              className={styles.btn}
-              disabled={loading}
-            >
-              {loading ? 'Berekenen...' : 'Bereken Mijn Reisbudget'}
-            </button>
-          </div>
+          
+          <button 
+            type="submit" 
+            className={styles.submitButton}
+            disabled={loading}
+          >
+            {loading ? 'Berekenen...' : 'Bereken Mijn Reisbudget'}
+          </button>
         </form>
-      </div>
-
-      {error && (
-        <div className={styles.error}>
-          <p>{error}</p>
-        </div>
-      )}
-
-      {result && (
-        <div className={styles.resultsContainer} id="results">
-          <h2>Jouw Reisbudget</h2>
-          <div className={styles.totalBudget}>{formatCurrency(result.totalCost)}</div>
-          <p>Hieronder vind je een uitsplitsing van de geschatte kosten voor jouw reis naar {result.destination.name}:</p>
+      ) : (
+        <div className={styles.resultContainer}>
+          <h2>Jouw Reisbudget voor {formData.destination}</h2>
+          
+          <div className={styles.totalBudget}>
+            €{result.totalCost}
+          </div>
           
           <div className={styles.budgetBreakdown}>
             <div className={styles.budgetItem}>
               <h4>Vervoer</h4>
-              <p>{formatCurrency(result.breakdown.transport)}</p>
+              <p>€{result.breakdown.transport}</p>
             </div>
             <div className={styles.budgetItem}>
               <h4>Accommodatie</h4>
-              <p>{formatCurrency(result.breakdown.accommodation)}</p>
+              <p>€{result.breakdown.accommodation}</p>
             </div>
             <div className={styles.budgetItem}>
               <h4>Eten</h4>
-              <p>{formatCurrency(result.breakdown.food)}</p>
+              <p>€{result.breakdown.food}</p>
             </div>
             <div className={styles.budgetItem}>
               <h4>Excursies</h4>
-              <p>{formatCurrency(result.breakdown.activities)}</p>
+              <p>€{result.breakdown.activities}</p>
             </div>
           </div>
-
+          
           {result.seasonalInfo.isSignificant && (
             <div className={styles.seasonalInfo}>
               <h4>Seizoensinformatie</h4>
-              {result.seasonalInfo.currentSeason === 'hoog' && (
+              {result.seasonalInfo.currentSeason === 'hoog' ? (
                 <p>Je reist in het hoogseizoen. In het laagseizoen ({result.seasonalInfo.lowSeasonMonths}) kunnen de prijzen tot {result.seasonalInfo.lowSeasonDiff}% lager liggen.</p>
-              )}
-              {result.seasonalInfo.currentSeason === 'laag' && (
+              ) : result.seasonalInfo.currentSeason === 'laag' ? (
                 <p>Je reist in het laagseizoen. In het hoogseizoen ({result.seasonalInfo.highSeasonMonths}) kunnen de prijzen tot {result.seasonalInfo.highSeasonDiff}% hoger liggen.</p>
-              )}
-              {result.seasonalInfo.currentSeason === 'normaal' && (
+              ) : (
                 <p>In het hoogseizoen ({result.seasonalInfo.highSeasonMonths}) kunnen de prijzen tot {result.seasonalInfo.highSeasonDiff}% hoger liggen. In het laagseizoen ({result.seasonalInfo.lowSeasonMonths}) kunnen de prijzen tot {result.seasonalInfo.lowSeasonDiff}% lager liggen.</p>
               )}
             </div>
           )}
-
+          
           <div className={styles.luxuryInfo}>
-            <h4>Jouw gekozen luxeniveau: {formData.luxury}</h4>
+            <h4>Luxeniveau: {result.luxuryLevel.name}</h4>
             <p>{result.luxuryLevel.description}</p>
           </div>
-
+          
           <div className={styles.ctaContainer}>
-            <a href="https://thisiselfin.com/nl/shop" className={styles.btn}>Ontdek hoe je kunt sparen voor je reis</a>
+            <p>We hebben je reisbudget ook naar je e-mailadres gestuurd!</p>
+            <a 
+              href="https://thisiselfin.com/nl/shop" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className={styles.ctaButton}
+            >
+              Ontdek hoe je kunt sparen voor je reis
+            </a>
           </div>
+          
+          <button 
+            onClick={( ) => setResult(null)} 
+            className={styles.backButton}
+          >
+            Terug naar calculator
+          </button>
         </div>
-       )}
-
+      )}
+      
+      {error && (
+        <div className={styles.error}>
+          <p>{error}</p>
+          <button 
+            onClick={() => setError(null)} 
+            className={styles.closeButton}
+          >
+            Sluiten
+          </button>
+        </div>
+      )}
+      
       <footer className={styles.footer}>
         <div className={styles.footerContent}>
           <p>© 2025 Elfin - Het grootste financiële platform voor vrouwen in Nederland en België</p>
