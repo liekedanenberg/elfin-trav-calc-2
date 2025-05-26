@@ -53,54 +53,77 @@ export default function Home() {
   };
   
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setError(null);
+  e.preventDefault();
+  setLoading(true);
+  setError(null);
+  
+  try {
+    // Bereid data voor om naar API te sturen
+    const requestData = {
+      destination: formData.destination,
+      adults: formData.adults,
+      children: formData.children,
+      days: formData.days,
+      transport: formData.transport,
+      luxury: formData.luxury,
+      month: currentMonth,
+      email: formData.email
+    };
     
-    try {
-      // Bereid data voor om naar API te sturen
-      const requestData = {
-        destination: formData.destination,
-        adults: formData.adults,
-        children: formData.children,
-        days: formData.days,
-        transport: formData.transport,
-        luxury: formData.luxury,
-        month: currentMonth,
-        email: formData.email
-      };
-      
-      // Voeg leeftijden van kinderen toe
-      formData.childrenAges.forEach((age, index) => {
-        requestData[`childAge${index}`] = age;
-      });
-      
-      // Stuur data naar API
-      const response = await fetch('/api/calculate', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(requestData),
-      });
-      
-      if (!response.ok) {
-        throw new Error('Er is een fout opgetreden bij het berekenen van het budget');
-      }
-      
-      const data = await response.json();
-      setResult(data.budget);
-      
-      // In een echte implementatie zou hier de Google Forms / Zapier integratie komen
-      console.log('E-mail zou worden verzonden naar:', formData.email);
-      
-    } catch (err) {
-      console.error('Error:', err);
-      setError(err.message);
-    } finally {
-      setLoading(false);
+    // Voeg leeftijden van kinderen toe
+    formData.childrenAges.forEach((age, index) => {
+      requestData[`childAge${index}`] = age;
+    });
+    
+    // Stuur data naar API
+    const response = await fetch('/api/calculate', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(requestData),
+    });
+    
+    if (!response.ok) {
+      throw new Error('Er is een fout opgetreden bij het berekenen van het budget');
     }
-  };
+    
+    const data = await response.json();
+    setResult(data.budget);
+    
+    // Stuur data naar Active Campaign en verstuur e-mail
+    const subscribeResponse = await fetch('/api/subscribe', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        email: formData.email,
+        firstName: '', // Optioneel, kan worden toegevoegd aan het formulier
+        lastName: '', // Optioneel, kan worden toegevoegd aan het formulier
+        destination: formData.destination,
+        totalBudget: data.budget.totalCost,
+        breakdown: data.budget.breakdown,
+        seasonalInfo: data.budget.seasonalInfo,
+        luxuryLevel: data.budget.luxuryLevel
+      }),
+    });
+    
+    if (!subscribeResponse.ok) {
+      console.error('Fout bij verzenden naar Active Campaign of versturen van e-mail');
+    } else {
+      // Toon een melding dat de e-mail is verzonden
+      alert('Je reisbudget is berekend en naar je e-mailadres verzonden!');
+    }
+    
+  } catch (err) {
+    console.error('Error:', err);
+    setError(err.message);
+  } finally {
+    setLoading(false);
+  }
+};
+
   
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('nl-NL', { 
