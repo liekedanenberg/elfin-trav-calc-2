@@ -45,7 +45,28 @@ const contactData = {
   ]
 };
 
-    
+  // Voeg contact toe aan de 'Prospects' lijst
+if (contactId) {
+  const listId = 1; // Dit is correct, het lijst-ID van 'Prospects' is 1
+  
+  const listData = {
+    contactList: {
+      list: listId,
+      contact: contactId,
+      status: 1 // 1 = geabonneerd
+    }
+  };
+  
+  await fetch(`${AC_API_URL}/contactLists`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Api-Token': AC_API_KEY
+    },
+    body: JSON.stringify(listData)
+  });
+}
+  
     // Stuur data naar Active Campaign
     const acResponse = await fetch(`${AC_API_URL}/contacts`, {
       method: 'POST',
