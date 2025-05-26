@@ -10,39 +10,41 @@ export async function POST(request) {
     const AC_API_KEY = process.env.AC_API_KEY;
     
     // Bereid contact data voor
-    const contactData = {
-      contact: {
-        email: data.email,
-        firstName: data.firstName || '',
-        lastName: data.lastName || '',
-      },
-      fieldValues: [
-        {
-          field: '1', // ID van het aangepaste veld voor bestemming
-          value: data.destination
-        },
-        {
-          field: '2', // ID van het aangepaste veld voor totaal budget
-          value: data.totalBudget.toString( )
-        },
-        {
-          field: '3', // ID van het aangepaste veld voor transport
-          value: data.breakdown.transport.toString()
-        },
-        {
-          field: '4', // ID van het aangepaste veld voor accommodatie
-          value: data.breakdown.accommodation.toString()
-        },
-        {
-          field: '5', // ID van het aangepaste veld voor eten
-          value: data.breakdown.food.toString()
-        },
-        {
-          field: '6', // ID van het aangepaste veld voor activiteiten
-          value: data.breakdown.activities.toString()
-        }
-      ]
-    };
+   // Bereid contact data voor
+const contactData = {
+  contact: {
+    email: data.email,
+    firstName: data.firstName || '',
+    lastName: data.lastName || '',
+  },
+  fieldValues: [
+    {
+      field: "Bestemming", // Gebruik de exacte naam van het veld zoals in Active Campaign
+      value: data.destination
+    },
+    {
+      field: "Totaal Budget",
+      value: data.totalBudget.toString()
+    },
+    {
+      field: "Transport Kosten",
+      value: data.breakdown.transport.toString()
+    },
+    {
+      field: "Accommodatie Kosten",
+      value: data.breakdown.accommodation.toString()
+    },
+    {
+      field: "Eten Kosten",
+      value: data.breakdown.food.toString()
+    },
+    {
+      field: "Excursies Kosten",
+      value: data.breakdown.activities.toString()
+    }
+  ]
+};
+
     
     // Stuur data naar Active Campaign
     const acResponse = await fetch(`${AC_API_URL}/contacts`, {
