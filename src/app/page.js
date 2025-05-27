@@ -391,7 +391,7 @@ export default function Home() {
           </button>
         </form>
       ) : (
-        <div className={styles.resultContainer}>
+        <div className={styles.resultContainer} style={{ maxWidth: '800px', margin: '0 auto' }}>
           <h2>Jouw Reisbudget voor {formData.destination}</h2>
           
           <div className={styles.totalBudget}>
