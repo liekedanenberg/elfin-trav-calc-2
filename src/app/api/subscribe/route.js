@@ -151,47 +151,49 @@ export async function POST(request) {
     }
     
     // Maak e-mail inhoud
-    const emailHtml = `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #333;">
-        <div style="background-color: rgb(210, 111, 28); padding: 20px; text-align: center; color: white;">
-          <h1>Jouw Reisbudget van Elfin</h1>
-        </div>
+    // Maak e-mail inhoud
+const emailHtml = `
+  <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #333;">
+    <div style="background-color: rgb(210, 111, 28); padding: 20px; text-align: center; color: white;">
+      <h1>Jouw Reisbudget van Elfin</h1>
+    </div>
+    
+    <div style="padding: 20px; background-color: #f9f7f4;">
+      <h2>Hallo!</h2>
+      <p>Bedankt voor het gebruiken van de Elfin reisbudget-calculator. Hier is een overzicht van je geschatte reisbudget:</p>
+      
+      <div style="background-color: white; padding: 20px; border-radius: 5px; margin: 20px 0;">
+        <h3>Reisbudget voor ${data.destination}</h3>
+        <h2 style="color: rgb(210, 111, 28); text-align: center; font-size: 28px;">${formatCurrency(data.totalBudget)}</h2>
         
-        <div style="padding: 20px; background-color: #f9f7f4;">
-          <h2>Hallo!</h2>
-          <p>Bedankt voor het gebruiken van de Elfin reisbudget-calculator. Hier is een overzicht van je geschatte reisbudget:</p>
-          
-          <div style="background-color: white; padding: 20px; border-radius: 5px; margin: 20px 0;">
-            <h3>Reisbudget voor ${data.destination}</h3>
-            <h2 style="color: rgb(210, 111, 28); text-align: center; font-size: 28px;">${formatCurrency(data.totalBudget)}</h2>
-            
-            <h4>Uitsplitsing:</h4>
-            <ul>
-              <li><strong>Vervoer:</strong> ${formatCurrency(data.breakdown.transport)}</li>
-              <li><strong>Accommodatie:</strong> ${formatCurrency(data.breakdown.accommodation)}</li>
-              <li><strong>Eten:</strong> ${formatCurrency(data.breakdown.food)}</li>
-              <li><strong>Excursies:</strong> ${formatCurrency(data.breakdown.activities)}</li>
-            </ul>
-            
-            ${seasonalText ? `<p style="background-color: #fff3e0; padding: 10px; border-left: 4px solid rgb(210, 111, 28);">${seasonalText}</p>` : ''}
-            
-            <p style="margin-top: 20px;">Luxeniveau: <strong>${data.luxuryLevel.name}</strong></p>
-            <p>${data.luxuryLevel.description}</p>
-          </div>
-          
-          <div style="text-align: center; margin: 30px 0;">
-            <a href="https://thisiselfin.com/nl/shop" style="background-color: rgb(210, 111, 28  ); color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold;">Ontdek hoe je kunt sparen voor je reis</a>
-          </div>
-          
-          <p>Heb je vragen over je reisbudget of wil je meer weten over hoe je financieel onafhankelijk kunt worden? Bezoek <a href="https://thisiselfin.com" style="color: rgb(210, 111, 28  );">thisiselfin.com</a>.</p>
-        </div>
+        <h4>Uitsplitsing:</h4>
+        <ul>
+          <li><strong>Vervoer:</strong> ${formatCurrency(data.breakdown.transport)}</li>
+          <li><strong>Accommodatie:</strong> ${formatCurrency(data.breakdown.accommodation)}</li>
+          <li><strong>Eten:</strong> ${formatCurrency(data.breakdown.food)}</li>
+          <li><strong>Excursies:</strong> ${formatCurrency(data.breakdown.activities)}</li>
+        </ul>
         
-        <div style="background-color: rgb(210, 111, 28); padding: 15px; text-align: center; color: white; font-size: 12px;">
-          <p>© 2025 Elfin - Het grootste financiële platform voor vrouwen in Nederland en België</p>
-          <p>Op missie om 1 miljoen vrouwen te helpen financieel onafhankelijk te worden</p>
-        </div>
+        ${seasonalText ? `<p style="background-color: #fff3e0; padding: 10px; border-left: 4px solid rgb(210, 111, 28);">${seasonalText}</p>` : ''}
+        
+        <p style="margin-top: 20px;">Luxeniveau: <strong>${data.luxuryLevel.name}</strong></p>
+        <p>${data.luxuryLevel.description}</p>
       </div>
-    `;
+      
+      <div style="text-align: center; margin: 30px 0;">
+        <a href="https://thisiselfin55352.ac-page.com/MagazineReizen" style="background-color: rgb(210, 111, 28  ); color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold;">Lees meer over sparen voor je droomreis in het magazine</a>
+      </div>
+      
+      <p>Heb je vragen over je reisbudget of wil je meer weten over hoe je financieel onafhankelijk kunt worden? Bezoek <a href="https://thisiselfin.com" style="color: rgb(210, 111, 28  );">thisiselfin.com</a>.</p>
+    </div>
+    
+    <div style="background-color: rgb(210, 111, 28); padding: 15px; text-align: center; color: white; font-size: 12px;">
+      <p>© 2025 Elfin - Het grootste financiële platform voor vrouwen in Nederland en België</p>
+      <p>Op missie om 1 miljoen vrouwen te helpen financieel onafhankelijk te worden</p>
+    </div>
+  </div>
+`;
+
     
     // Verstuur e-mail
     const mailOptions = {
