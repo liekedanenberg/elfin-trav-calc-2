@@ -151,7 +151,6 @@ export async function POST(request) {
     }
     
     // Maak e-mail inhoud
-    // Maak e-mail inhoud
 const emailHtml = `
   <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #333;">
     <div style="background-color: rgb(210, 111, 28); padding: 20px; text-align: center; color: white;">
@@ -181,7 +180,26 @@ const emailHtml = `
       </div>
       
       <div style="text-align: center; margin: 30px 0;">
-        <a href="https://thisiselfin55352.ac-page.com/MagazineReizen" style="background-color: rgb(210, 111, 28  ); color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold;">Lees meer over sparen voor je droomreis in het magazine</a>
+        <table width="100%" border="0" cellspacing="0" cellpadding="0">
+          <tr>
+            <td align="center">
+              <a href="https://thisiselfin55352.ac-page.com/MagazineReizen" 
+                 style="background-color: rgb(210, 111, 28 ); 
+                        color: white; 
+                        display: inline-block;
+                        padding: 12px 15px; 
+                        text-decoration: none; 
+                        border-radius: 5px; 
+                        font-weight: bold;
+                        font-size: 14px;
+                        line-height: 1.5;
+                        max-width: 90%;
+                        word-break: break-word;">
+                Lees meer over sparen voor je droomreis in het magazine
+              </a>
+            </td>
+          </tr>
+        </table>
       </div>
       
       <p>Heb je vragen over je reisbudget of wil je meer weten over hoe je financieel onafhankelijk kunt worden? Bezoek <a href="https://thisiselfin.com" style="color: rgb(210, 111, 28  );">thisiselfin.com</a>.</p>
@@ -193,6 +211,7 @@ const emailHtml = `
     </div>
   </div>
 `;
+
 
     
     // Verstuur e-mail
