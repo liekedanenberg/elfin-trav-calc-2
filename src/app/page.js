@@ -46,14 +46,13 @@ export default function Home() {
     setShowChildrenAges(formData.children > 0);
   }, [formData.children]);
   
+  // Algemene handler voor niet-numerieke velden
   const handleInputChange = (e) => {
     const { name, value, type } = e.target;
     
     if (type === 'number') {
-      setFormData({
-        ...formData,
-        [name]: parseInt(value, 10) || 0
-      });
+      // Voor numerieke velden gebruiken we nu handleNumericInputChange
+      handleNumericInputChange(e);
     } else {
       setFormData({
         ...formData,
@@ -62,9 +61,36 @@ export default function Home() {
     }
   };
   
+  // Nieuwe handler voor numerieke velden die het wissen van '0' toestaat
+  const handleNumericInputChange = (e) => {
+    const { name, value } = e.target;
+    
+    // Sta lege waarde toe (voor het wissen van '0')
+    if (value === '') {
+      setFormData({
+        ...formData,
+        [name]: ''
+      });
+    } else {
+      // Anders normaal verwerken als getal
+      setFormData({
+        ...formData,
+        [name]: parseInt(value, 10) || 0
+      });
+    }
+  };
+  
+  // Aangepaste handler voor kinderleeftijden
   const handleChildAgeChange = (index, value) => {
     const newAges = [...formData.childrenAges];
-    newAges[index] = parseInt(value, 10) || 0;
+    
+    // Sta lege waarde toe (voor het wissen van '0')
+    if (value === '') {
+      newAges[index] = '';
+    } else {
+      // Anders normaal verwerken als getal
+      newAges[index] = parseInt(value, 10) || 0;
+    }
     
     setFormData({
       ...formData,
@@ -212,7 +238,7 @@ export default function Home() {
                 min="1" 
                 max="10"
                 value={formData.adults}
-                onChange={handleInputChange}
+                onChange={handleNumericInputChange}
                 required 
               />
             </div>
@@ -225,7 +251,7 @@ export default function Home() {
                 min="0" 
                 max="10"
                 value={formData.children}
-                onChange={handleInputChange}
+                onChange={handleNumericInputChange}
               />
             </div>
             
@@ -262,7 +288,7 @@ export default function Home() {
                 min="1" 
                 max="90"
                 value={formData.days}
-                onChange={handleInputChange}
+                onChange={handleNumericInputChange}
                 required 
               />
             </div>
