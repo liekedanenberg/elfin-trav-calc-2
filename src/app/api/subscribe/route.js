@@ -10,7 +10,7 @@ export async function POST(request) {
     const AC_API_URL = process.env.AC_API_URL; // bijv. 'https://youraccountname.api-us1.com/api/3'
     const AC_API_KEY = process.env.AC_API_KEY;
     
-    console.log('Starting Active Campaign integration' );
+    console.log('Starting Active Campaign integration');
     let contactId = null; // Definieer contactId hier zodat het in de hele functie beschikbaar is
     
     try {
@@ -72,6 +72,88 @@ export async function POST(request) {
         // Haal contactId op uit de response
         contactId = acData.contact?.id;
         console.log('Contact ID:', contactId);
+        
+        // Voeg tag toe aan het contact als er een tag is meegegeven
+        if (contactId && data.tag) {
+          console.log('Adding tag to contact:', data.tag);
+          
+          // Controleer eerst of de tag al bestaat, of maak een nieuwe aan
+          const tagResponse = await fetch(`${AC_API_URL}/tags?filters[title]=${encodeURIComponent(data.tag)}`, {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json',
+              'Api-Token': AC_API_KEY
+            }
+          });
+          
+          const tagResponseText = await tagResponse.text();
+          console.log('Tag search response:', tagResponseText);
+          
+          let tagData;
+          try {
+            tagData = JSON.parse(tagResponseText);
+          } catch (e) {
+            console.error('Error parsing tag response:', e);
+            tagData = { tags: [] };
+          }
+          
+          let tagId;
+          
+          if (tagData.tags && tagData.tags.length > 0) {
+            // Tag bestaat al, gebruik bestaande tag ID
+            tagId = tagData.tags[0].id;
+            console.log('Using existing tag ID:', tagId);
+          } else {
+            // Tag bestaat nog niet, maak nieuwe aan
+            console.log('Creating new tag:', data.tag);
+            const createTagResponse = await fetch(`${AC_API_URL}/tags`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Api-Token': AC_API_KEY
+              },
+              body: JSON.stringify({
+                tag: {
+                  tag: data.tag,
+                  tagType: 'contact',
+                  description: 'Tag voor reiscalculator giveaway'
+                }
+              })
+            });
+            
+            const createTagResponseText = await createTagResponse.text();
+            console.log('Create tag response:', createTagResponseText);
+            
+            try {
+              const newTagData = JSON.parse(createTagResponseText);
+              tagId = newTagData.tag.id;
+              console.log('Created new tag with ID:', tagId);
+            } catch (e) {
+              console.error('Error parsing create tag response:', e);
+            }
+          }
+          
+          // Koppel tag aan contact als we een tagId hebben
+          if (tagId) {
+            console.log('Applying tag to contact. Tag ID:', tagId, 'Contact ID:', contactId);
+            const tagContactResponse = await fetch(`${AC_API_URL}/contactTags`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Api-Token': AC_API_KEY
+              },
+              body: JSON.stringify({
+                contactTag: {
+                  contact: contactId,
+                  tag: tagId
+                }
+              })
+            });
+            
+            const tagContactResponseText = await tagContactResponse.text();
+            console.log('Tag contact response:', tagContactResponseText);
+          }
+        }
         
         // Voeg contact toe aan de 'Prospects' lijst
         if (contactId) {
@@ -151,68 +233,66 @@ export async function POST(request) {
     }
     
     // Maak e-mail inhoud
-const emailHtml = `
-  <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #333;">
-    <div style="background-color: rgb(210, 111, 28); padding: 20px; text-align: center; color: white;">
-      <h1>Jouw Reisbudget van Elfin</h1>
-    </div>
-    
-    <div style="padding: 20px; background-color: #f9f7f4;">
-      <h2>Hallo!</h2>
-      <p>Bedankt voor het gebruiken van de Elfin reisbudget-calculator. Hier is een overzicht van je geschatte reisbudget:</p>
-      
-      <div style="background-color: white; padding: 20px; border-radius: 5px; margin: 20px 0;">
-        <h3>Reisbudget voor ${data.destination}</h3>
-        <h2 style="color: rgb(210, 111, 28); text-align: center; font-size: 28px;">${formatCurrency(data.totalBudget)}</h2>
+    const emailHtml = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #333;">
+        <div style="background-color: rgb(210, 111, 28); padding: 20px; text-align: center; color: white;">
+          <h1>Jouw Reisbudget van Elfin</h1>
+        </div>
         
-        <h4>Uitsplitsing:</h4>
-        <ul>
-          <li><strong>Vervoer:</strong> ${formatCurrency(data.breakdown.transport)}</li>
-          <li><strong>Accommodatie:</strong> ${formatCurrency(data.breakdown.accommodation)}</li>
-          <li><strong>Eten:</strong> ${formatCurrency(data.breakdown.food)}</li>
-          <li><strong>Excursies:</strong> ${formatCurrency(data.breakdown.activities)}</li>
-        </ul>
+        <div style="padding: 20px; background-color: #f9f7f4;">
+          <h2>Hallo!</h2>
+          <p>Bedankt voor het gebruiken van de Elfin reisbudget-calculator. Hier is een overzicht van je geschatte reisbudget:</p>
+          
+          <div style="background-color: white; padding: 20px; border-radius: 5px; margin: 20px 0;">
+            <h3>Reisbudget voor ${data.destination}</h3>
+            <h2 style="color: rgb(210, 111, 28); text-align: center; font-size: 28px;">${formatCurrency(data.totalBudget)}</h2>
+            
+            <h4>Uitsplitsing:</h4>
+            <ul>
+              <li><strong>Vervoer:</strong> ${formatCurrency(data.breakdown.transport)}</li>
+              <li><strong>Accommodatie:</strong> ${formatCurrency(data.breakdown.accommodation)}</li>
+              <li><strong>Eten:</strong> ${formatCurrency(data.breakdown.food)}</li>
+              <li><strong>Excursies:</strong> ${formatCurrency(data.breakdown.activities)}</li>
+            </ul>
+            
+            ${seasonalText ? `<p style="background-color: #fff3e0; padding: 10px; border-left: 4px solid rgb(210, 111, 28);">${seasonalText}</p>` : ''}
+            
+            <p style="margin-top: 20px;">Luxeniveau: <strong>${data.luxuryLevel.name}</strong></p>
+            <p>${data.luxuryLevel.description}</p>
+          </div>
+          
+          <div style="text-align: center; margin: 30px 0;">
+            <table width="100%" border="0" cellspacing="0" cellpadding="0">
+              <tr>
+                <td align="center">
+                  <a href="https://thisiselfin55352.ac-page.com/MagazineReizen" 
+                     style="background-color: rgb(210, 111, 28); 
+                            color: white; 
+                            display: inline-block;
+                            padding: 12px 15px; 
+                            text-decoration: none; 
+                            border-radius: 5px; 
+                            font-weight: bold;
+                            font-size: 14px;
+                            line-height: 1.5;
+                            max-width: 90%;
+                            word-break: break-word;">
+                    Lees meer over sparen voor je droomreis in het magazine
+                  </a>
+                </td>
+              </tr>
+            </table>
+          </div>
+          
+          <p>Heb je vragen over je reisbudget of wil je meer weten over hoe je financieel onafhankelijk kunt worden? Bezoek <a href="https://thisiselfin.com" style="color: rgb(210, 111, 28 );">thisiselfin.com</a>.</p>
+        </div>
         
-        ${seasonalText ? `<p style="background-color: #fff3e0; padding: 10px; border-left: 4px solid rgb(210, 111, 28);">${seasonalText}</p>` : ''}
-        
-        <p style="margin-top: 20px;">Luxeniveau: <strong>${data.luxuryLevel.name}</strong></p>
-        <p>${data.luxuryLevel.description}</p>
+        <div style="background-color: rgb(210, 111, 28); padding: 15px; text-align: center; color: white; font-size: 12px;">
+          <p>© 2025 Elfin - Het grootste financiële platform voor vrouwen in Nederland en België</p>
+          <p>Op missie om 1 miljoen vrouwen te helpen financieel onafhankelijk te worden</p>
+        </div>
       </div>
-      
-      <div style="text-align: center; margin: 30px 0;">
-        <table width="100%" border="0" cellspacing="0" cellpadding="0">
-          <tr>
-            <td align="center">
-              <a href="https://thisiselfin55352.ac-page.com/MagazineReizen" 
-                 style="background-color: rgb(210, 111, 28 ); 
-                        color: white; 
-                        display: inline-block;
-                        padding: 12px 15px; 
-                        text-decoration: none; 
-                        border-radius: 5px; 
-                        font-weight: bold;
-                        font-size: 14px;
-                        line-height: 1.5;
-                        max-width: 90%;
-                        word-break: break-word;">
-                Lees meer over sparen voor je droomreis in het magazine
-              </a>
-            </td>
-          </tr>
-        </table>
-      </div>
-      
-      <p>Heb je vragen over je reisbudget of wil je meer weten over hoe je financieel onafhankelijk kunt worden? Bezoek <a href="https://thisiselfin.com" style="color: rgb(210, 111, 28  );">thisiselfin.com</a>.</p>
-    </div>
-    
-    <div style="background-color: rgb(210, 111, 28); padding: 15px; text-align: center; color: white; font-size: 12px;">
-      <p>© 2025 Elfin - Het grootste financiële platform voor vrouwen in Nederland en België</p>
-      <p>Op missie om 1 miljoen vrouwen te helpen financieel onafhankelijk te worden</p>
-    </div>
-  </div>
-`;
-
-
+    `;
     
     // Verstuur e-mail
     const mailOptions = {
